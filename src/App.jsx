@@ -11,6 +11,7 @@ const ChatMessage = ({ message, isUser }) => (
 );
 
 const App = () => {
+  const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
   const [messages, setMessages] = useState([
     {text: "Bienvenue sur TOQ ! Ravi de vous revoir. En quoi puis-je vous être utile aujourd'hui ?", isUser:false}
   ]);
@@ -122,7 +123,7 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_REACT_APP_API_KEY}`
+            'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
             model: "gpt-4",
