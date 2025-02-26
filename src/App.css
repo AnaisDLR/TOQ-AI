@@ -1,0 +1,334 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #282826;
+  color: #ffffff;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.bg-gradient-to-br {
+  background: linear-gradient(to bottom right, #1f7478, #30302e);
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.bg-white {
+  background-color: #30302e;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+.shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.transition-all {
+  transition: all 0.2s;
+}
+
+.duration-500 {
+  transition-duration: 0.5s;
+}
+
+.ease-in-out {
+  transition-timing-function: ease-in-out;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.max-w-6xl {
+  max-width: 72rem;
+}
+
+.max-w-2xl {
+  max-width: 32rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.border-r {
+  border-right: 1px solid #1f7478;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  color: #1f7478;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.text-gray-800 {
+  color: #ffffff;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
+.h-60vh {
+  height: 60vh;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.pr-4 {
+  padding-right: 1rem;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thumb-gray-300 {
+  scrollbar-color: #1f7478 transparent;
+}
+
+.scrollbar-track-gray-100 {
+  scrollbar-color: transparent #30302e;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.p-3 {
+  padding: 0.75rem;
+}
+
+.border {
+  border: 1px solid #1f7478;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.focus\:outline-none:focus {
+  outline: 0;
+}
+
+.focus\:ring-2:focus {
+  box-shadow: 0 0 0 2px rgba(31, 116, 120, 0.5);
+}
+
+.focus\:ring-blue-500:focus {
+  box-shadow: 0 0 0 2px rgba(31, 116, 120, 0.5);
+}
+
+.focus\:border-transparent:focus {
+  border-color: transparent;
+}
+
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.bg-gray-400 {
+  background-color: #1f7478;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
+.bg-blue-600 {
+  background-color: #1f7478;
+}
+
+.hover\:bg-blue-700:hover {
+  background-color: #1a5e5f;
+}
+
+.active\:bg-blue-800:active {
+  background-color: #14494a;
+}
+
+.text-white {
+  color: white;
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.hover\:shadow-lg:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.w-1\/2 {
+  width: 50%;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  color: #1f7478;
+}
+
+.prose {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #ffffff;
+}
+
+.max-w-none {
+  max-width: none;
+}
+
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+@keyframes move-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-move-left {
+  animation: move-left 0.5s forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-in;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.syllabus-template {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.syllabus-template h1 {
+  color: #1f7478; /* Couleur verte pour les titres */
+  border-bottom: 2px solid #1f7478; /* Trait de séparation */
+  padding-bottom: 5px;
+}
+
+.syllabus-template .font-bold {
+  font-weight: bold;
+}
+
+.syllabus-template .table-auto {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.syllabus-template .border-b {
+  border-bottom: 2px solid #1f7478;
+}
+
+.syllabus-template .p-2 {
+  padding: 8px;
+}
+
+/* Zone de chat (chatbot) */
+.chatbot-container {
+  max-height: 80vh; /* Limite la hauteur à 65% de la hauteur de la fenêtre */
+  overflow-y: auto; /* Permet le scroll vertical lorsque le contenu est trop long */
+  padding-right: 1rem; /* Pour éviter que le texte soit coupé sur la droite */
+  scrollbar-width: thin; /* Barre de défilement fine */
+  scrollbar-color: #1f7478 transparent; /* Couleur personnalisée de la barre de défilement */
+}
+
+/* Zone d'affichage du syllabus */
+.syllabus-container {
+  max-height: 80vh; /* Même hauteur pour le syllabus */
+  overflow-y: auto; /* Permet le scroll vertical lorsque le contenu est trop long */
+  scrollbar-width: thin; /* Barre de défilement fine */
+  scrollbar-color: #1f7478 transparent; /* Couleur personnalisée de la barre de défilement */
+}
+
+/* Styles des bulles de chat */
+.chat-message {
+  max-width: 70%; /* Limite la largeur des messages */
+  padding: 1rem;
+  border-radius: 9999px; /* Bulles arrondies */
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  word-wrap: break-word;
+}
+
+/* Message de l'utilisateur */
+.chat-message.user {
+  background-color: #1f7478; /* Couleur de fond pour l'utilisateur */
+  color: white;
+  margin-left: auto; /* Aligne à droite */
+  border-bottom-right-radius: 0; /* Supprime l'angle bas gauche */
+}
+
+/* Message de l'IA */
+.chat-message.ai {
+  background-color: #f1f1f1; /* Couleur de fond pour l'IA */
+  color: #333;
+  margin-right: auto; /* Aligne à gauche */
+  border-bottom-left-radius: 0; /* Supprime l'angle bas droit */
+}
+
+.chat-message p {
+  margin: 0;
+  padding: 0;
+}
+
