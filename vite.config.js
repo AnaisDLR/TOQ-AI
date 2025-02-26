@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     define: {
-      'process.env.VITE_API_KEY': JSON.stringify(env.VITE_REACT_APP_API_KEY)
+      'process.env.VITE_REACT_APP_API_KEY': JSON.stringify(env.VITE_REACT_APP_API_KEY)
     }
   }
 })
