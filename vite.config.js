@@ -8,5 +8,12 @@ export default defineConfig(async () => ({
     react(),
     tailwindcss(),
   ],
-  base: '/TOQ-AI/'
+  base: '/TOQ-AI/',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
+  }
 }))
