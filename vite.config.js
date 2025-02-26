@@ -11,13 +11,6 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
     ],
     base: '/TOQ-AI/',
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks: undefined
-        }
-      }
-    },
     define: {
       'process.env.VITE_REACT_APP_API_KEY': JSON.stringify(env.VITE_REACT_APP_API_KEY)
     }
