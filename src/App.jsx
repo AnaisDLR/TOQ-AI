@@ -12,6 +12,7 @@ const ChatMessage = ({ message, isUser }) => (
 
 const App = () => {
   const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
+  console.log('API Key:', import.meta.env.VITE_API_KEY ? 'Définie' : 'Non définie');
   const [messages, setMessages] = useState([
     {text: "Bienvenue sur TOQ ! Ravi de vous revoir. En quoi puis-je vous être utile aujourd'hui ?", isUser:false}
   ]);
