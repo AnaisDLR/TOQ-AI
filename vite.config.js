@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
     ],
     base: '/TOQ-AI/',
     define: {
-      'process.env.VITE_REACT_APP_API_KEY': JSON.stringify(env.VITE_REACT_APP_API_KEY)
+      'import.meta.env.VITE_REACT_APP_API_KEY': JSON.stringify(process.env.VITE_REACT_APP_API_KEY || env.VITE_REACT_APP_API_KEY)
     }
   }
 })
