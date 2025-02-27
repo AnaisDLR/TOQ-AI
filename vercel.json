@@ -13,19 +13,13 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
-  "env": {
-    "VITE_REACT_APP_API_KEY": "@vite_react_app_api_key"
-  },
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_REACT_APP_API_KEY": "@vite_react_app_api_key"
+  }
 }
