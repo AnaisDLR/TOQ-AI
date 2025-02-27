@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
     ],
-    base: '/TOQ-AI/',
+    base: '/',
     define: {
       'import.meta.env.VITE_REACT_APP_API_KEY': JSON.stringify(process.env.VITE_REACT_APP_API_KEY || env.VITE_REACT_APP_API_KEY)
     }
