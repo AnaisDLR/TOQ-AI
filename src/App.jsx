@@ -14,7 +14,7 @@ const App = () => {
   const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
   console.log('API Key:', apiKey ? 'Définie' : 'Non définie');
   const [messages, setMessages] = useState([
-    {text: "Bienvenue sur TOQ ! Ravi de vous revoir. En quoi puis-je vous être utile aujourd'hui ?", isUser:false}
+    {text: "Bienvenue sur TOQ ! Ravi de vous revoir. Sur quel sujet souhaitez-vous créer votre syllabus aujourd’hui ?", isUser:false}
   ]);
   const [input, setInput] = useState('');
   const [syllabus, setSyllabus] = useState({
