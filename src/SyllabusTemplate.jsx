@@ -98,7 +98,7 @@ const SyllabusTemplate = ({ syllabus, onChange }) => {
       filename: `syllabus_${syllabus.courseName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false
       },
@@ -106,7 +106,8 @@ const SyllabusTemplate = ({ syllabus, onChange }) => {
         unit: 'mm', 
         format: 'a4', 
         orientation: 'portrait'
-      }
+      },
+      pagebreak: { mode: ['css', 'legacy'] }
     };
   
     // Générer et télécharger le PDF
@@ -126,10 +127,10 @@ const SyllabusTemplate = ({ syllabus, onChange }) => {
   
   // Fonction utilitaire pour créer des sections
   const createSection = (title, content) => `
-    <div style="margin-top: 20px;">
-      <h2 style="color: #1f7478; font-size: 18px; margin-bottom: 10px;">${title}</h2>
-      <hr style="border: 1px solid #1f7478; margin-bottom: 10px;">
-      <p style="line-height: 1.5;">${content}</p>
+    <div class="pdf-section">
+      <h2 style="color: #1f7478; font-size: 18px; margin-bottom: 10px; page-break-inside: avoid;">${title}</h2>
+      <hr style="border: 1px solid #1f7478; margin-bottom: 10px; page-break-inside: avoid;">
+      <p style="line-height: 1.5; page-break-inside: avoid;">${content.replace(/\n/g, '<br>')}</p>
     </div>
   `;
 
