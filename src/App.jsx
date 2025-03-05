@@ -299,7 +299,7 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-600 relative">
       {/* Logo */}
-      <div className="absolute top-4 left-4">
+      <div className="flex justify-center pt-4 pb-2">
         <img
           src={logo}
           alt="Logo"
