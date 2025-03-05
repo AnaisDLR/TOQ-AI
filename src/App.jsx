@@ -299,16 +299,16 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-600 relative">
       {/* Logo */}
-      <div className="flex justify-center pt-4 pb-2">
+      <div className="absolute top-4 left-4 z-20">
         <img
           src={logo}
           alt="Logo"
-          className="h-16 w-auto object-contain absolute top-4 left-4 z-10"
+          className="w-0.3 h-0.3 object-contain"
         />
       </div>
 
       {/* Conteneur principal */}
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-600 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-600 flex items-center justify-center p-4 pt-24">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex overflow-hidden">
           {/* Chatbot Section */}
           <div className="w-full md:w-1/2 p-6 flex flex-col transition-all duration-500">
