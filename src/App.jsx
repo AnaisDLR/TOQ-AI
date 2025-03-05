@@ -303,7 +303,7 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
         <img
           src={logo}
           alt="Logo"
-          className="w-0.5 h-0.5 object-contain"
+          className="h-16 w-auto object-contain absolute top-4 left-4 z-10"
         />
       </div>
 
