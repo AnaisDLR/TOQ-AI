@@ -3,6 +3,7 @@ import './App.css';
 import SyllabusTemplate from './SyllabusTemplate';
 import { Listbox } from '@headlessui/react';
 import logo from './assets/Logo_ECE_Paris2.png';
+import { Analytics } from '@vercel/analytics/react';
 
 const ChatMessage = ({ message, isUser }) => (
   <div className={`chat-message ${isUser ? 'user' : 'ai'} mb-4 animate-fade-in`}>
@@ -416,6 +417,7 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
           </div>
         </div>
       </div>
+      <Analytics />
     </div>
   );
 };
