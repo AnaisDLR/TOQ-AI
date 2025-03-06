@@ -6,6 +6,7 @@ import logo from './assets/Logo_ECE_Paris2.png';
 import { Analytics } from '@vercel/analytics/react';
 // Importez la bibliothèque PDF.js
 import * as pdfjsLib from 'pdfjs-dist';
+// La ligne suivante est commentée pour être compatible avec Vercel
 //import 'pdfjs-dist/build/pdf.worker.entry';
 
 // Configure le worker PDF.js
@@ -45,7 +46,7 @@ const App = () => {
   const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
   console.log('API Key:', apiKey ? 'Définie' : 'Non définie');
   const [messages, setMessages] = useState([
-    {text: "Bienvenue sur TOQ ! Ravi de vous revoir. Sur quel sujet souhaitez-vous créer votre syllabus aujourd'hui ?", isUser:false}
+    {text: "Bienvenue sur TOQ ! Ravi de vous revoir. Importez vos PDF pour générer un syllabus.", isUser:false}
   ]);
   const [input, setInput] = useState('');
   const [syllabus, setSyllabus] = useState({
@@ -90,6 +91,44 @@ const App = () => {
     scrollToBottom();
   }, [messages, syllabus]);
 
+  // Fonction pour identifier le thème à partir des contenus PDF
+  const identifyThemeFromPDF = async (pdfContents) => {
+    try {
+      // Préparer le contenu des PDF pour l'envoyer à l'API
+      const pdfContentsText = pdfContents.map(pdf => 
+        `Fichier: ${pdf.name}\nContenu:\n${pdf.content}`
+      ).join('\n\n-----\n\n');
+  
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [{
+            role: "user",
+            content: `Voici le contenu de plusieurs documents PDF. Identifie le thème principal qui pourrait être utilisé pour créer un syllabus de cours. Réponds uniquement avec le thème identifié, sans phrases additionnelles ni explications.
+            
+            CONTENU DES FICHIERS PDF FOURNIS:
+            ${pdfContentsText}`
+          }],
+          temperature: 0.3
+        }),
+      });
+  
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message || 'Erreur API');
+  
+      const theme = data.choices[0].message.content.trim();
+      return theme;
+    } catch (error) {
+      console.error('Erreur lors de l\'identification du thème:', error);
+      return "Thème non identifié";
+    }
+  };
+
   // Fonction modifiée pour générer le syllabus
   const generateSyllabus = async (distributionMode) => {
     try {
@@ -113,7 +152,7 @@ const App = () => {
           model: "gpt-4",
           messages: [{
             role: "user",
-            content: `Thème demandé : ${currentTheme}
+            content: `Thème identifié : ${currentTheme}
             Nombre de syllabus demandé : ${requestedSyllabusCount}
             Distribution demandée : ${distributionMode}
             
@@ -156,6 +195,9 @@ const App = () => {
       const aiResponse = data.choices[0].message.content;
       const syllabusArray = aiResponse.split('---').filter(Boolean);
   
+      // Réinitialiser la liste des syllabus
+      setSyllabusList([]);
+      
       syllabusArray.forEach((syllabusText, index) => {
         const newSyllabus = parseSyllabus(syllabusText);
         setSyllabusList(prev => [...prev, newSyllabus]);
@@ -189,23 +231,7 @@ const App = () => {
     const userMessage = input;
     setInput('');
 
-    // Pour toute nouvelle entrée (nouveau thème)
-    if (!awaitingSyllabusCount && !awaitingDistributionMode) {
-      // Réinitialiser uniquement les états du processus
-      resetStates();
-      // Sauvegarder le nouveau thème
-      setCurrentTheme(userMessage);
-      // Ajouter le message utilisateur aux messages existants
-      setMessages(prev => [...prev, 
-        { text: userMessage, isUser: true },
-        { text: "Combien de syllabus souhaitez-vous générer ?", isUser: false }
-      ]);
-      setAwaitingSyllabusCount(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // Ajouter le message utilisateur pour les autres cas
+    // Ajouter le message utilisateur
     setMessages(prev => [...prev, { text: userMessage, isUser: true }]);
 
     // Si on attend la réponse pour le nombre de syllabus
@@ -225,16 +251,15 @@ const App = () => {
     
       if (count === 1) {
         // Si un seul syllabus est demandé, passer directement à la génération
-        setAwaitingDistributionMode(false);
-        generateSyllabus("standard");
+        await generateSyllabus("standard");
       } else {
         setAwaitingDistributionMode(true);
         setMessages(prev => [...prev, {
           text: "Comment souhaitez-vous répartir le contenu dans les syllabus ?",
           isUser: false
         }]);
+        setIsLoading(false);
       }
-      setIsLoading(false);
       return;
     }
 
@@ -245,7 +270,7 @@ const App = () => {
         setPdfDistributionMode(userMessage);
         
         // Appeler la fonction de génération avec le mode de distribution
-        generateSyllabus(userMessage);
+        await generateSyllabus(userMessage);
       } catch (error) {
         console.error('Erreur:', error);
         setMessages(prev => [...prev, { text: `Erreur: ${error.message}`, isUser: false }]);
@@ -254,20 +279,13 @@ const App = () => {
       return;
     }
 
-    // Pour toute nouvelle entrée (nouveau thème)
-    if (!awaitingSyllabusCount && !awaitingDistributionMode) {
-      // Réinitialiser les états
-      resetStates();
-
-      // Poser la question pour le nombre de syllabus
-      setMessages(prev => [...prev, {
-        text: "Combien de syllabus souhaitez-vous générer ?",
-        isUser: false
-      }]);
-      setAwaitingSyllabusCount(true);
-      setIsLoading(false);
-      return;
-    }
+    // Pour toute nouvelle entrée (texte libre)
+    setMessages(prev => [...prev, {
+      text: "Combien de syllabus souhaitez-vous générer ?",
+      isUser: false
+    }]);
+    setAwaitingSyllabusCount(true);
+    setIsLoading(false);
   };
 
   const parseSyllabus = (text) => {
@@ -324,10 +342,14 @@ const App = () => {
     setAwaitingDistributionMode(false);
     setPdfDistributionMode(null);
     setRequestedSyllabusCount(null);
-    setCurrentTheme('');
+    // Ne pas réinitialiser currentTheme car il est maintenant déterminé par les PDF
+    
+    // Réinitialiser la liste des syllabus
+    setSyllabusList([]);
+    setGenerated(false);
   };
 
-  // Fonction modifiée pour extraire le contenu des PDF
+  // Fonction modifiée pour extraire le contenu des PDF et identifier le thème
   const handleFileChange = async (event) => {
     const files = Array.from(event.target.files);
     const pdfFiles = files.filter(file => file.type === 'application/pdf');
@@ -358,14 +380,27 @@ const App = () => {
       
       setPdfContents(extractedContents);
       
-      // Message de confirmation
+      // Identifier le thème à partir des PDF
       setMessages(prev => [...prev, {
-        text: `${pdfFiles.length} fichier(s) PDF analysé(s) avec succès. Veuillez entrer un thème pour votre syllabus.`,
+        text: `Analyse du contenu des PDF pour identifier le thème...`,
         isUser: false
       }]);
       
-      setIsLoading(false);
+      const theme = await identifyThemeFromPDF(extractedContents);
+      setCurrentTheme(theme);
+      
+      // Message de confirmation avec le thème détecté
+      setMessages(prev => [...prev, {
+        text: `${pdfFiles.length} fichier(s) PDF analysé(s) avec succès. Le thème identifié est : "${theme}". Combien de syllabus souhaitez-vous générer ?`,
+        isUser: false
+      }]);
+      
+      // Demander directement le nombre de syllabus
+      setAwaitingSyllabusCount(true);
       resetStates();
+      setAwaitingSyllabusCount(true); // Réactiver car resetStates() le désactive
+      
+      setIsLoading(false);
     }
   };
 
@@ -426,7 +461,7 @@ const App = () => {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Demandez un syllabus sur ..."
+                placeholder="Entrez vos instructions..."
                 className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 disabled={isLoading}
               />
@@ -435,7 +470,7 @@ const App = () => {
                 disabled={isLoading}
                 className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${isLoading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
               >
-                {isLoading ? 'Chargement...' : 'Générer'}
+                {isLoading ? 'Chargement...' : 'Envoyer'}
               </button>
             </form>
           </div>
