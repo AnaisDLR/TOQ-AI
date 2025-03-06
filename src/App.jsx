@@ -301,11 +301,11 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-600 relative">
       {/* Logo */}
       <div className="absolute top-4 left-4 z-20">
-        <img
+        {/* <img
           src={logo}
           alt="Logo"
           className="w-0.1 h-0.1 object-contain"
-        />
+        /> */}
       </div>
 
       {/* Conteneur principal */}
