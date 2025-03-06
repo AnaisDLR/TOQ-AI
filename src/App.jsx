@@ -6,7 +6,7 @@ import logo from './assets/Logo_ECE_Paris2.png';
 import { Analytics } from '@vercel/analytics/react';
 // Importez la bibliothèque PDF.js
 import * as pdfjsLib from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.entry';
+//import 'pdfjs-dist/build/pdf.worker.entry';
 
 // Configure le worker PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
