@@ -4,6 +4,9 @@ import SyllabusTemplate from './SyllabusTemplate';
 import { Listbox } from '@headlessui/react';
 import logo from './assets/Logo_ECE_Paris2.png';
 import { Analytics } from '@vercel/analytics/react';
+import * as pdfjs from 'pdfjs-dist';
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
 
 const ChatMessage = ({ message, isUser }) => (
   <div className={`chat-message ${isUser ? 'user' : 'ai'} mb-4 animate-fade-in`}>
@@ -11,12 +14,45 @@ const ChatMessage = ({ message, isUser }) => (
   </div>
 );
 
+const extractTextFromPDF = async (file) => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const textItems = content.items.map(item => item.str);
+      fullText += textItems.join(' ') + '\n';
+    }
+    
+    return fullText;
+  } catch (error) {
+    console.error('Erreur lors de l\'extraction du texte du PDF:', error);
+    return '';
+  }
+};
+
 const generateSyllabus = async (distributionMode) => {
   try {
     setPdfDistributionMode(distributionMode);
     setMessages(prev => [...prev,
       { text: "Génération de(s) syllabus en cours...", isUser: false }
     ]);
+    
+    // Extraire le texte de tous les PDFs sélectionnés
+    const pdfTexts = await Promise.all(
+      selectedFiles.map(async (file) => {
+        const text = await extractTextFromPDF(file);
+        return { name: file.name, content: text };
+      })
+    );
+    
+    // Formater le contenu des PDFs pour l'envoyer à l'API
+    const pdfContent = pdfTexts.map(pdf => 
+      `Nom du fichier: ${pdf.name}\nContenu: ${pdf.content}`
+    ).join('\n\n');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -31,27 +67,30 @@ const generateSyllabus = async (distributionMode) => {
           content: `Thème demandé : ${currentTheme}
           Nombre de syllabus demandé : ${requestedSyllabusCount}
           Distribution demandée : ${distributionMode}
-          Fichiers PDF fournis : ${selectedFiles.map(f => f.name).join(', ')}
-          Génère exactement ${requestedSyllabusCount} syllabus sur le thème "${currentTheme}" selon cette distribution. Pour chaque syllabus, utilise ce format :
           
-          **Nom du Cours** : ...
-          **Semestre** : ...
-          **Crédits ECTS** : ...
-          **Nombre d'heures dispensées** : ...
-          **Cours Magistraux** : ...
-          **Travaux Dirigés** : ...
-          **Travaux Pratiques** : ...
-          **Projets** : ...
-          **Enseignant référent** : ...
-          **Equipe d'enseignants** : ...
-          **Modalité pédagogique** : ...
-          **Langue** : ...
-          **Objectifs pédagogiques** : ...
-          **Pré requis** : ...
-          **Contenu** : ...
-          **Compétences à acquérir** : ...
-          **Modalités d'évaluation** : ...
-          **Références externes** : ...
+          Contenu des fichiers PDF fournis :
+          ${pdfContent}
+          
+          Analyser en profondeur le contenu des PDF fournis et génère exactement ${requestedSyllabusCount} syllabus sur le thème "${currentTheme}" selon cette distribution. Pour chaque syllabus, utilise ce format et remplis chaque section avec des informations détaillées extraites des PDF :
+          
+          **Nom du Cours** : Donner un nom précis et pertinent basé sur le contenu du PDF
+          **Semestre** : Suggérer un semestre approprié
+          **Crédits ECTS** : Suggérer un nombre approprié
+          **Nombre d'heures dispensées** : Suggérer un nombre approprié
+          **Cours Magistraux** : Indiquer le nombre d'heures
+          **Travaux Dirigés** : Indiquer le nombre d'heures
+          **Travaux Pratiques** : Indiquer le nombre d'heures
+          **Projets** : Décrire les projets possibles basés sur le contenu
+          **Enseignant référent** : Laisser générique si non spécifié
+          **Equipe d'enseignants** : Laisser générique si non spécifié
+          **Modalité pédagogique** : Suggérer des modalités appropriées
+          **Langue** : Indiquer la langue du document
+          **Objectifs pédagogiques** : Formuler des objectifs clairs et détaillés basés sur le contenu du PDF
+          **Pré requis** : Identifier les connaissances préalables nécessaires d'après le document
+          **Contenu** : Détailler le contenu du cours en structurant les informations extraites du PDF
+          **Compétences à acquérir** : Lister les compétences précises que les étudiants développeront
+          **Modalités d'évaluation** : Proposer des méthodes d'évaluation adaptées au contenu
+          **Références externes** : Suggérer des références pertinentes liées au contenu du cours
           
           ---
           `
