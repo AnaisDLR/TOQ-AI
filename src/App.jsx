@@ -11,6 +11,86 @@ const ChatMessage = ({ message, isUser }) => (
   </div>
 );
 
+const generateSyllabus = async (distributionMode) => {
+  try {
+    setPdfDistributionMode(distributionMode);
+    setMessages(prev => [...prev,
+      { text: "Génération de(s) syllabus en cours...", isUser: false }
+    ]);
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4",
+        messages: [{
+          role: "user",
+          content: `Thème demandé : ${currentTheme}
+          Nombre de syllabus demandé : ${requestedSyllabusCount}
+          Distribution demandée : ${distributionMode}
+          Fichiers PDF fournis : ${selectedFiles.map(f => f.name).join(', ')}
+          Génère exactement ${requestedSyllabusCount} syllabus sur le thème "${currentTheme}" selon cette distribution. Pour chaque syllabus, utilise ce format :
+          
+          **Nom du Cours** : ...
+          **Semestre** : ...
+          **Crédits ECTS** : ...
+          **Nombre d'heures dispensées** : ...
+          **Cours Magistraux** : ...
+          **Travaux Dirigés** : ...
+          **Travaux Pratiques** : ...
+          **Projets** : ...
+          **Enseignant référent** : ...
+          **Equipe d'enseignants** : ...
+          **Modalité pédagogique** : ...
+          **Langue** : ...
+          **Objectifs pédagogiques** : ...
+          **Pré requis** : ...
+          **Contenu** : ...
+          **Compétences à acquérir** : ...
+          **Modalités d'évaluation** : ...
+          **Références externes** : ...
+          
+          ---
+          `
+        }],
+        temperature: 0.7
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'Erreur API');
+
+    const aiResponse = data.choices[0].message.content;
+    const syllabusArray = aiResponse.split('---').filter(Boolean);
+
+    syllabusArray.forEach((syllabusText, index) => {
+      const newSyllabus = parseSyllabus(syllabusText);
+      setSyllabusList(prev => [...prev, newSyllabus]);
+      if (index === 0) {
+        setSyllabus(newSyllabus);
+      }
+      setGenerated(true);
+    });
+
+    setMessages(prev => [...prev,
+    { text: `${syllabusArray.length} syllabus ont été générés !`, isUser: false }
+    ]);
+
+    setAwaitingSyllabusCount(false);
+    setAwaitingDistributionMode(false);
+    setPdfDistributionMode(null);
+    
+  } catch (error) {
+    console.error('Erreur:', error);
+    setMessages(prev => [...prev, { text: "Erreur lors de la génération.", isUser: false }]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 const App = () => {
   const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
   console.log('API Key:', apiKey ? 'Définie' : 'Non définie');
@@ -98,14 +178,21 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
         setIsLoading(false);
         return;
       }
-
+    
       setRequestedSyllabusCount(count);
       setAwaitingSyllabusCount(false);
-      setAwaitingDistributionMode(true);
-      setMessages(prev => [...prev, {
-        text: "Comment souhaitez-vous répartir le contenu dans les syllabus ?",
-        isUser: false
-      }]);
+    
+      if (count === 1) {
+        // Si un seul syllabus est demandé, passer directement à la génération
+        setAwaitingDistributionMode(false);
+        generateSyllabus(userMessage);
+      } else {
+        setAwaitingDistributionMode(true);
+        setMessages(prev => [...prev, {
+          text: "Comment souhaitez-vous répartir le contenu dans les syllabus ?",
+          isUser: false
+        }]);
+      }
       setIsLoading(false);
       return;
     }
