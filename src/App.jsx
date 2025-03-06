@@ -185,7 +185,7 @@ if (!awaitingSyllabusCount && !awaitingDistributionMode) {
       if (count === 1) {
         // Si un seul syllabus est demandé, passer directement à la génération
         setAwaitingDistributionMode(false);
-        generateSyllabus(userMessage);
+        generateSyllabus("standard");
       } else {
         setAwaitingDistributionMode(true);
         setMessages(prev => [...prev, {
