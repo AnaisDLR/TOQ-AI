@@ -12,27 +12,29 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Configure le worker PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-// Fonction pour extraire le texte d'un fichier PDF
 const extractTextFromPDF = async (file) => {
   try {
     // Convertir le fichier en ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
+
     // Charger le document PDF
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
     let fullText = '';
-    
+
     // Extraire le texte de chaque page
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map(item => item.str).join(' ');
-      fullText += pageText + '\n\n';
+      fullText += pageText + '\n';
     }
-    
+
+    console.log('Extracted PDF Text:', fullText); // Add this line to log the extracted text
     return fullText;
   } catch (error) {
-    console.error('Erreur lors de l\'extraction du texte PDF:', error);
-    return `Erreur d'extraction du PDF ${file.name}: ${error.message}`;
+    console.error('Erreur lors de l\'extraction du texte du PDF:', error);
+    return 'Erreur lors de l\'extraction du texte';
   }
 };
 
@@ -46,7 +48,7 @@ const App = () => {
   const apiKey = import.meta.env.VITE_REACT_APP_API_KEY;
   console.log('API Key:', apiKey ? 'Définie' : 'Non définie');
   const [messages, setMessages] = useState([
-    {text: "Bienvenue sur TOQ ! Ravi de vous revoir. Importez vos PDF pour générer un syllabus.", isUser:false}
+    { text: "Bienvenue sur TOQ ! Ravi de vous revoir. Importez vos PDF pour générer un syllabus.", isUser: false }
   ]);
   const [input, setInput] = useState('');
   const [syllabus, setSyllabus] = useState({
@@ -95,10 +97,10 @@ const App = () => {
   const identifyThemeFromPDF = async (pdfContents) => {
     try {
       // Préparer le contenu des PDF pour l'envoyer à l'API
-      const pdfContentsText = pdfContents.map(pdf => 
+      const pdfContentsText = pdfContents.map(pdf =>
         `Fichier: ${pdf.name}\nContenu:\n${pdf.content}`
       ).join('\n\n-----\n\n');
-  
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -117,10 +119,10 @@ const App = () => {
           temperature: 0.3
         }),
       });
-  
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || 'Erreur API');
-  
+
       const theme = data.choices[0].message.content.trim();
       return theme;
     } catch (error) {
@@ -134,14 +136,14 @@ const App = () => {
     try {
       setPdfDistributionMode(distributionMode);
       setMessages(prev => [...prev,
-        { text: "Génération de(s) syllabus en cours...", isUser: false }
+      { text: "Génération de(s) syllabus en cours...", isUser: false }
       ]);
-  
+
       // Préparer le contenu des PDF pour l'envoyer à l'API
-      const pdfContentsText = pdfContents.map(pdf => 
+      const pdfContentsText = pdfContents.map(pdf =>
         `Fichier: ${pdf.name}\nContenu:\n${pdf.content}`
       ).join('\n\n-----\n\n');
-  
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -188,16 +190,16 @@ const App = () => {
           temperature: 0.7
         }),
       });
-  
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || 'Erreur API');
-  
+
       const aiResponse = data.choices[0].message.content;
       const syllabusArray = aiResponse.split('---').filter(Boolean);
-  
+
       // Réinitialiser la liste des syllabus
       setSyllabusList([]);
-      
+
       syllabusArray.forEach((syllabusText, index) => {
         const newSyllabus = parseSyllabus(syllabusText);
         setSyllabusList(prev => [...prev, newSyllabus]);
@@ -206,15 +208,15 @@ const App = () => {
         }
         setGenerated(true);
       });
-  
+
       setMessages(prev => [...prev,
       { text: `${syllabusArray.length} syllabus ont été générés !`, isUser: false }
       ]);
-  
+
       setAwaitingSyllabusCount(false);
       setAwaitingDistributionMode(false);
       setPdfDistributionMode(null);
-      
+
     } catch (error) {
       console.error('Erreur:', error);
       setMessages(prev => [...prev, { text: `Erreur lors de la génération: ${error.message}`, isUser: false }]);
@@ -245,10 +247,10 @@ const App = () => {
         setIsLoading(false);
         return;
       }
-    
+
       setRequestedSyllabusCount(count);
       setAwaitingSyllabusCount(false);
-    
+
       if (count === 1) {
         // Si un seul syllabus est demandé, passer directement à la génération
         await generateSyllabus("standard");
@@ -268,7 +270,7 @@ const App = () => {
       try {
         setAwaitingDistributionMode(false);
         setPdfDistributionMode(userMessage);
-        
+
         // Appeler la fonction de génération avec le mode de distribution
         await generateSyllabus(userMessage);
       } catch (error) {
@@ -343,64 +345,112 @@ const App = () => {
     setPdfDistributionMode(null);
     setRequestedSyllabusCount(null);
     // Ne pas réinitialiser currentTheme car il est maintenant déterminé par les PDF
-    
+
     // Réinitialiser la liste des syllabus
     setSyllabusList([]);
     setGenerated(false);
   };
 
   // Fonction modifiée pour extraire le contenu des PDF et identifier le thème
-  const handleFileChange = async (event) => {
-    const files = Array.from(event.target.files);
-    const pdfFiles = files.filter(file => file.type === 'application/pdf');
-    
-    if (pdfFiles.length > 0) {
+  // Ajoutez cette fonction pour gérer l'importation de PDF
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
+
+    if (files.length > 0) {
       setIsLoading(true);
       setMessages(prev => [...prev, {
-        text: `Chargement de ${pdfFiles.length} fichier(s) PDF en cours...`,
-        isUser: true
+        text: "Analyse des fichiers PDF en cours...",
+        isUser: false
       }]);
-      
-      setSelectedFiles(pdfFiles);
-      
-      // Extraire le contenu des PDF
-      const extractedContents = [];
-      for (const file of pdfFiles) {
-        try {
-          const content = await extractTextFromPDF(file);
-          extractedContents.push({ name: file.name, content });
-        } catch (error) {
-          console.error(`Erreur lors de l'extraction du PDF ${file.name}:`, error);
+
+      try {
+        // Extraire le texte de tous les fichiers PDF
+        let allPdfText = '';
+        for (const file of files) {
+          if (file.type === 'application/pdf') {
+            const text = await extractTextFromPDF(file);
+            allPdfText += text + '\n\n';
+          }
+        }
+
+        // Si du texte a été extrait, l'envoyer à l'API pour générer un syllabus
+        if (allPdfText) {
           setMessages(prev => [...prev, {
-            text: `Erreur lors de l'extraction du PDF ${file.name}: ${error.message}`,
+            text: "Génération du syllabus à partir du contenu PDF...",
+            isUser: false
+          }]);
+
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: "gpt-4",
+              messages: [{
+                role: "user",
+                content: `Voici le contenu extrait d'un document PDF. Utilise ces informations pour générer un syllabus complet et structuré.
+              
+              Contenu du PDF:
+              ${allPdfText}
+              
+              Génère un syllabus complet en utilisant exactement ce format:
+              
+              **Nom du Cours** : [Extraire ou déduire du contenu]
+              **Semestre** : [Extraire ou déduire du contenu]
+              **Crédits ECTS** : [Extraire ou déduire du contenu]
+              **Nombre d'heures dispensées** : [Extraire ou déduire du contenu]
+              **Cours Magistraux** : [Extraire ou déduire du contenu]
+              **Travaux Dirigés** : [Extraire ou déduire du contenu]
+              **Travaux Pratiques** : [Extraire ou déduire du contenu]
+              **Projets** : [Extraire ou déduire du contenu]
+              **Enseignant référent** : [Extraire ou déduire du contenu]
+              **Equipe d'enseignants** : [Extraire ou déduire du contenu]
+              **Modalité pédagogique** : [Extraire ou déduire du contenu]
+              **Langue** : [Extraire ou déduire du contenu]
+              **Objectifs pédagogiques** : [Extraire ou déduire du contenu]
+              **Pré requis** : [Extraire ou déduire du contenu]
+              **Contenu** : [Extraire ou déduire du contenu]
+              **Compétences à acquérir** : [Extraire ou déduire du contenu]
+              **Modalités d'évaluation** : [Extraire ou déduire du contenu]
+              **Références externes** : [Extraire ou déduire du contenu]`
+              }],
+              temperature: 0.7
+            }),
+          });
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error?.message || 'Erreur API');
+
+          const aiResponse = data.choices[0].message.content;
+          const newSyllabus = parseSyllabus(aiResponse);
+
+          setSyllabus(newSyllabus);
+          setSyllabusList([newSyllabus]);
+          setCurrentSyllabusIndex(0);
+          setGenerated(true);
+
+          setMessages(prev => [...prev, {
+            text: "Syllabus généré avec succès à partir du contenu PDF !",
+            isUser: false
+          }]);
+        } else {
+          setMessages(prev => [...prev, {
+            text: "Aucun contenu textuel n'a pu être extrait des fichiers PDF.",
             isUser: false
           }]);
         }
+      } catch (error) {
+        console.error('Erreur lors du traitement des fichiers PDF:', error);
+        setMessages(prev => [...prev, {
+          text: "Une erreur est survenue lors du traitement des fichiers PDF.",
+          isUser: false
+        }]);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setPdfContents(extractedContents);
-      
-      // Identifier le thème à partir des PDF
-      setMessages(prev => [...prev, {
-        text: `Analyse du contenu des PDF pour identifier le thème...`,
-        isUser: false
-      }]);
-      
-      const theme = await identifyThemeFromPDF(extractedContents);
-      setCurrentTheme(theme);
-      
-      // Message de confirmation avec le thème détecté
-      setMessages(prev => [...prev, {
-        text: `${pdfFiles.length} fichier(s) PDF analysé(s) avec succès. Le thème identifié est : "${theme}". Combien de syllabus souhaitez-vous générer ?`,
-        isUser: false
-      }]);
-      
-      // Demander directement le nombre de syllabus
-      setAwaitingSyllabusCount(true);
-      resetStates();
-      setAwaitingSyllabusCount(true); // Réactiver car resetStates() le désactive
-      
-      setIsLoading(false);
     }
   };
 
