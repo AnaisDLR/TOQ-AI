@@ -63,13 +63,40 @@ const App = () => {
     const pdf = await loadingTask.promise;
     const textContent = [];
 
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    // Limiter le nombre de pages à traiter si le PDF est très long
+    const maxPages = Math.min(pdf.numPages, 10); // Traiter max 10 pages par PDF
+
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const text = await page.getTextContent();
       textContent.push(text.items.map(item => item.str).join(' '));
     }
 
-    return textContent.join('\n');
+    // Limiter la taille du texte extrait (environ 1000 tokens par PDF)
+    const combinedText = textContent.join('\n');
+    return combinedText.length > 4000 ? combinedText.substring(0, 4000) + "... [contenu tronqué]" : combinedText;
+  };
+
+  const summarizePdfContent = (pdfContent, maxLength = 1000) => {
+    if (!pdfContent || pdfContent.length <= maxLength) return pdfContent;
+
+    // Extraire les sections importantes (titres, en-têtes, etc.)
+    const importantSections = pdfContent.split('\n')
+      .filter(line => {
+        const trimmed = line.trim();
+        return trimmed.length > 0 &&
+          (trimmed.endsWith(':') ||
+            /^[A-Z]/.test(trimmed) ||
+            trimmed.length < 100);
+      })
+      .join('\n');
+
+    // Si même les sections importantes sont trop longues, tronquer
+    if (importantSections.length > maxLength) {
+      return importantSections.substring(0, maxLength) + "... [contenu résumé]";
+    }
+
+    return importantSections;
   };
 
   const extractPdfTitle = async (file) => {
@@ -154,9 +181,17 @@ const App = () => {
 
         //récupérer le contenu des pdf (pas seulement le nom) dans une variable
         const pdfContent = await Promise.all(selectedFiles.map(async file => {
-          return await loadPdfText(file);
+          const content = await loadPdfText(file);
+          return {
+            name: file.name,
+            summary: summarizePdfContent(content)
+          };
         }));
 
+        // Préparer un résumé concis des PDF pour l'API
+        const pdfSummaries = pdfContent.map(pdf =>
+          `Fichier: ${pdf.name}\nRésumé: ${pdf.summary}`
+        ).join('\n\n');
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -172,7 +207,7 @@ const App = () => {
               Nombre de syllabus demandé : ${requestedSyllabusCount}
               Distribution demandée : ${userMessage}
               Fichiers PDF fournis : ${selectedFiles.map(f => f.name).join(', ')}
-              Contenu des PDF : ${pdfContent.join('\n')}
+              Informations extraites des PDF : ${pdfSummaries}
               Génère exactement ${requestedSyllabusCount} syllabus sur le thème "${currentTheme}" selon cette distribution. Pour chaque syllabus, utilise ce format :
               
               **Nom du Cours** : ...
@@ -222,8 +257,8 @@ const App = () => {
         ]);
 
         setMessages(prev => [...prev,
-          { text: `Sur quel autre sujet souhaitez-vous créer votre syllabus ?`, isUser: false }
-          ]);
+        { text: `Sur quel autre sujet souhaitez-vous créer votre syllabus ?`, isUser: false }
+        ]);
 
         // Après la génération réussie, réinitialiser les états pour la prochaine entrée
         setAwaitingSyllabusCount(false);
@@ -347,7 +382,7 @@ const App = () => {
       setCurrentSyllabusIndex(syllabusList.length - 1);
       setSyllabus(syllabusList[syllabusList.length - 1]);
     }
-  }, [syllabusList]);  
+  }, [syllabusList]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-600 relative">
