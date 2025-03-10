@@ -9,6 +9,7 @@ import { GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
 import * as XLSX from 'xlsx';
 GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 import mammoth from "mammoth";
+import JSZip from 'jszip';
 
 const ChatMessage = ({ message, isUser }) => (
   <div className={`chat-message ${isUser ? 'user' : 'ai'} mb-4 animate-fade-in`}>
@@ -129,9 +130,35 @@ const App = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          let result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
-          resolve(result.value);
+          const zip = new JSZip();
+          const content = await zip.loadAsync(e.target.result);
+          
+          // Les fichiers PPTX sont des archives ZIP contenant des fichiers XML
+          // Extraire le contenu des diapositives
+          let textContent = "";
+          const slideRegex = /ppt\/slides\/slide[0-9]+\.xml/;
+          
+          const slidePromises = Object.keys(content.files)
+            .filter(filename => slideRegex.test(filename))
+            .sort() // Trier pour préserver l'ordre des diapositives
+            .map(async (filename) => {
+              const slideXml = await content.files[filename].async("string");
+              
+              // Extraire le texte des balises <a:t> (texte dans PPTX)
+              const matches = slideXml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+              const slideText = matches
+                .map(match => match.replace(/<a:t>|<\/a:t>/g, ''))
+                .join(' ');
+                
+              return `Diapositive ${filename.match(/slide([0-9]+)/)[1]}:\n${slideText}`;
+            });
+            
+          const slides = await Promise.all(slidePromises);
+          textContent = slides.join('\n\n');
+          
+          resolve(textContent);
         } catch (error) {
+          console.error("Error extracting text from PowerPoint:", error);
           reject(error);
         }
       };
@@ -189,34 +216,32 @@ const App = () => {
 
   const summarizePptxContent = (pptxContent, maxLength = 1000) => {
     if (!pptxContent || pptxContent.length <= maxLength) return pptxContent;
-
+  
     // Extraire les titres et premières lignes de chaque diapositive
     const slideSummaries = pptxContent.split('Diapositive').map(slide => {
       if (!slide.trim()) return '';
-
+  
       const lines = slide.split('\n');
       const slideNumber = lines[0];
-      const titleLine = lines.find(line => line.startsWith('Titre:'));
-      const contentLine = lines.find(line => line.startsWith('Contenu:'));
-
+      
       // Prendre juste le début du contenu pour le résumé
       let summaryContent = '';
-      if (contentLine) {
-        const content = contentLine.substring(9); // Retirer "Contenu: "
+      if (lines.length > 1) {
+        const content = lines.slice(1).join(' ');
         summaryContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
       }
-
-      return `Diapositive${slideNumber}${titleLine ? '\n' + titleLine : ''}${summaryContent ? '\n' + summaryContent : ''}`;
+  
+      return `Diapositive${slideNumber}\n${summaryContent}`;
     }).filter(Boolean);
-
+  
     // Limiter le nombre de diapositives dans le résumé
     const maxSlides = 10;
     let result = slideSummaries.slice(0, maxSlides).join('\n\n');
-
+  
     if (slideSummaries.length > maxSlides) {
       result += `\n\n... et ${slideSummaries.length - maxSlides} autres diapositives`;
     }
-
+  
     return result.length > maxLength ?
       result.substring(0, maxLength) + "... [contenu résumé]" :
       result;
@@ -253,14 +278,45 @@ const App = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          let result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
-          let title = result.value.split("\n")[0] || file.name; // Prend la première ligne comme titre
-          resolve(title);
+          const zip = new JSZip();
+          const content = await zip.loadAsync(e.target.result);
+          
+          // Essayer d'extraire les propriétés principales (titre)
+          if (content.files['docProps/core.xml']) {
+            const coreXml = await content.files['docProps/core.xml'].async("string");
+            const titleMatch = coreXml.match(/<dc:title>([^<]*)<\/dc:title>/);
+            if (titleMatch && titleMatch[1]) {
+              return resolve(titleMatch[1].trim());
+            }
+          }
+          
+          // Sinon, essayer d'extraire le titre de la première diapositive
+          const slideKeys = Object.keys(content.files)
+            .filter(key => /ppt\/slides\/slide1\.xml/.test(key));
+            
+          if (slideKeys.length > 0) {
+            const slideXml = await content.files[slideKeys[0]].async("string");
+            
+            // Chercher les textes dans la première diapositive
+            const textMatches = slideXml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+            const slideTexts = textMatches
+              .map(match => match.replace(/<a:t>|<\/a:t>/g, ''))
+              .filter(text => text.trim().length > 0);
+              
+            // Utiliser le premier texte non vide comme titre
+            if (slideTexts.length > 0) {
+              return resolve(slideTexts[0]);
+            }
+          }
+          
+          // Si aucun titre n'est trouvé, utiliser le nom du fichier
+          resolve(file.name);
         } catch (error) {
-          reject(error);
+          console.error("Error extracting PowerPoint title:", error);
+          resolve(file.name); // Revenir au nom du fichier en cas d'erreur
         }
       };
-      reader.onerror = reject;
+      reader.onerror = () => resolve(file.name);
       reader.readAsArrayBuffer(file);
     });
   };
@@ -563,9 +619,9 @@ const App = () => {
     const supportedFiles = files.filter(file =>
       file.type === 'application/pdf' ||
       file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      file.type === 'application/vnd.ms-excel'
-      //file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
-      //file.type === 'application/vnd.ms-powerpoint'
+      file.type === 'application/vnd.ms-excel' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+      file.type === 'application/vnd.ms-powerpoint'
     );
 
     setSelectedFiles(supportedFiles);
@@ -642,7 +698,7 @@ const App = () => {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept=".pdf,.xlsx,.xls" //,.pptx,.ppt
+                accept=".pdf,.xlsx,.xls,.pptx,.ppt" //,.pptx,.ppt
                 multiple
                 className="hidden"
               />
