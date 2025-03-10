@@ -167,6 +167,31 @@ const App = () => {
     });
   };
 
+  const loadWordContent = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          const text = result.value;
+          
+          // Limiter la taille du texte extrait (environ 4000 caractères)
+          const limitedText = text.length > 4000 
+            ? text.substring(0, 4000) + "... [contenu tronqué]" 
+            : text;
+            
+          resolve(limitedText);
+        } catch (error) {
+          console.error("Erreur lors de la lecture du fichier Word:", error);
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   const summarizePdfContent = (pdfContent, maxLength = 1000) => {
     if (!pdfContent || pdfContent.length <= maxLength) return pdfContent;
 
@@ -247,6 +272,22 @@ const App = () => {
       result;
   };
 
+  const summarizeWordContent = (wordContent, maxLength = 1000) => {
+    if (!wordContent || wordContent.length <= maxLength) return wordContent;
+  
+    // Extraire les sections importantes (titres, en-têtes, paragraphes courts)
+    const paragraphs = wordContent.split('\n').filter(line => line.trim().length > 0);
+    
+    // Prendre les premiers paragraphes
+    const importantParagraphs = paragraphs.slice(0, 10).join('\n');
+    
+    if (importantParagraphs.length > maxLength) {
+      return importantParagraphs.substring(0, maxLength) + "... [contenu résumé]";
+    }
+    
+    return importantParagraphs;
+  };
+
   const extractPdfTitle = async (file) => {
     const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
     const metadata = await pdf.getMetadata();
@@ -314,6 +355,45 @@ const App = () => {
         } catch (error) {
           console.error("Error extracting PowerPoint title:", error);
           resolve(file.name); // Revenir au nom du fichier en cas d'erreur
+        }
+      };
+      reader.onerror = () => resolve(file.name);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const extractWordTitle = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          
+          // Extraire d'abord les propriétés du document si possible
+          try {
+            // Tentative d'extraction des métadonnées (non standard avec mammoth)
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            const text = result.value;
+            
+            // Essayer de trouver un titre dans les premières lignes
+            const lines = text.split('\n').filter(line => line.trim());
+            if (lines.length > 0) {
+              // Utiliser la première ligne comme titre potentiel
+              const potentialTitle = lines[0].trim();
+              // Si la première ligne ressemble à un titre (pas trop long)
+              if (potentialTitle.length < 100) {
+                return resolve(potentialTitle);
+              }
+            }
+          } catch (metadataError) {
+            console.log("Impossible d'extraire les métadonnées du document Word");
+          }
+          
+          // Si nous n'avons pas pu extraire un titre, utiliser le nom du fichier
+          resolve(file.name);
+        } catch (error) {
+          console.error("Erreur lors de l'extraction du titre Word:", error);
+          resolve(file.name);
         }
       };
       reader.onerror = () => resolve(file.name);
@@ -448,6 +528,13 @@ const App = () => {
               name: file.name,
               type: 'PowerPoint',
               summary: summarizePptxContent(content)
+            };
+          } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const content = await loadWordContent(file);
+            return {
+              name: file.name,
+              type: 'Word',
+              summary: summarizeWordContent(content)
             };
           }
           return { name: file.name, type: 'Inconnu', summary: 'Format non pris en charge' };
@@ -621,8 +708,10 @@ const App = () => {
       file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       file.type === 'application/vnd.ms-excel' ||
       file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
-      file.type === 'application/vnd.ms-powerpoint'
+      file.type === 'application/vnd.ms-powerpoint' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     );
+  
 
     setSelectedFiles(supportedFiles);
     resetStates();
@@ -638,6 +727,8 @@ const App = () => {
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
           file.type === 'application/vnd.ms-powerpoint') {
           return await extractPptxTitle(file);
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          return await extractWordTitle(file);
         }
         return file.name;
       }));
@@ -698,7 +789,7 @@ const App = () => {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept=".pdf,.xlsx,.xls,.pptx,.ppt" //,.pptx,.ppt
+                accept=".pdf,.xlsx,.xls,.pptx,.ppt,.docx" //,.pptx,.ppt
                 multiple
                 className="hidden"
               />
