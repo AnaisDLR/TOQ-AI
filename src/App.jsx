@@ -132,30 +132,30 @@ const App = () => {
         try {
           const zip = new JSZip();
           const content = await zip.loadAsync(e.target.result);
-          
+
           // Les fichiers PPTX sont des archives ZIP contenant des fichiers XML
           // Extraire le contenu des diapositives
           let textContent = "";
           const slideRegex = /ppt\/slides\/slide[0-9]+\.xml/;
-          
+
           const slidePromises = Object.keys(content.files)
             .filter(filename => slideRegex.test(filename))
             .sort() // Trier pour préserver l'ordre des diapositives
             .map(async (filename) => {
               const slideXml = await content.files[filename].async("string");
-              
+
               // Extraire le texte des balises <a:t> (texte dans PPTX)
               const matches = slideXml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
               const slideText = matches
                 .map(match => match.replace(/<a:t>|<\/a:t>/g, ''))
                 .join(' ');
-                
+
               return `Diapositive ${filename.match(/slide([0-9]+)/)[1]}:\n${slideText}`;
             });
-            
+
           const slides = await Promise.all(slidePromises);
           textContent = slides.join('\n\n');
-          
+
           resolve(textContent);
         } catch (error) {
           console.error("Error extracting text from PowerPoint:", error);
@@ -175,12 +175,12 @@ const App = () => {
           const arrayBuffer = e.target.result;
           const result = await mammoth.extractRawText({ arrayBuffer });
           const text = result.value;
-          
+
           // Limiter la taille du texte extrait (environ 4000 caractères)
-          const limitedText = text.length > 4000 
-            ? text.substring(0, 4000) + "... [contenu tronqué]" 
+          const limitedText = text.length > 4000
+            ? text.substring(0, 4000) + "... [contenu tronqué]"
             : text;
-            
+
           resolve(limitedText);
         } catch (error) {
           console.error("Erreur lors de la lecture du fichier Word:", error);
@@ -241,32 +241,32 @@ const App = () => {
 
   const summarizePptxContent = (pptxContent, maxLength = 1000) => {
     if (!pptxContent || pptxContent.length <= maxLength) return pptxContent;
-  
+
     // Extraire les titres et premières lignes de chaque diapositive
     const slideSummaries = pptxContent.split('Diapositive').map(slide => {
       if (!slide.trim()) return '';
-  
+
       const lines = slide.split('\n');
       const slideNumber = lines[0];
-      
+
       // Prendre juste le début du contenu pour le résumé
       let summaryContent = '';
       if (lines.length > 1) {
         const content = lines.slice(1).join(' ');
         summaryContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
       }
-  
+
       return `Diapositive${slideNumber}\n${summaryContent}`;
     }).filter(Boolean);
-  
+
     // Limiter le nombre de diapositives dans le résumé
     const maxSlides = 10;
     let result = slideSummaries.slice(0, maxSlides).join('\n\n');
-  
+
     if (slideSummaries.length > maxSlides) {
       result += `\n\n... et ${slideSummaries.length - maxSlides} autres diapositives`;
     }
-  
+
     return result.length > maxLength ?
       result.substring(0, maxLength) + "... [contenu résumé]" :
       result;
@@ -274,17 +274,17 @@ const App = () => {
 
   const summarizeWordContent = (wordContent, maxLength = 1000) => {
     if (!wordContent || wordContent.length <= maxLength) return wordContent;
-  
+
     // Extraire les sections importantes (titres, en-têtes, paragraphes courts)
     const paragraphs = wordContent.split('\n').filter(line => line.trim().length > 0);
-    
+
     // Prendre les premiers paragraphes
     const importantParagraphs = paragraphs.slice(0, 10).join('\n');
-    
+
     if (importantParagraphs.length > maxLength) {
       return importantParagraphs.substring(0, maxLength) + "... [contenu résumé]";
     }
-    
+
     return importantParagraphs;
   };
 
@@ -315,51 +315,17 @@ const App = () => {
   };
 
   const extractPptxTitle = async (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const zip = new JSZip();
-          const content = await zip.loadAsync(e.target.result);
-          
-          // Essayer d'extraire les propriétés principales (titre)
-          if (content.files['docProps/core.xml']) {
-            const coreXml = await content.files['docProps/core.xml'].async("string");
-            const titleMatch = coreXml.match(/<dc:title>([^<]*)<\/dc:title>/);
-            if (titleMatch && titleMatch[1]) {
-              return resolve(titleMatch[1].trim());
-            }
-          }
-          
-          // Sinon, essayer d'extraire le titre de la première diapositive
-          const slideKeys = Object.keys(content.files)
-            .filter(key => /ppt\/slides\/slide1\.xml/.test(key));
-            
-          if (slideKeys.length > 0) {
-            const slideXml = await content.files[slideKeys[0]].async("string");
-            
-            // Chercher les textes dans la première diapositive
-            const textMatches = slideXml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
-            const slideTexts = textMatches
-              .map(match => match.replace(/<a:t>|<\/a:t>/g, ''))
-              .filter(text => text.trim().length > 0);
-              
-            // Utiliser le premier texte non vide comme titre
-            if (slideTexts.length > 0) {
-              return resolve(slideTexts[0]);
-            }
-          }
-          
-          // Si aucun titre n'est trouvé, utiliser le nom du fichier
-          resolve(file.name);
-        } catch (error) {
-          console.error("Error extracting PowerPoint title:", error);
-          resolve(file.name); // Revenir au nom du fichier en cas d'erreur
-        }
-      };
-      reader.onerror = () => resolve(file.name);
-      reader.readAsArrayBuffer(file);
-    });
+    try {
+      const fileName = file.name;
+
+      // Nettoyer le nom du fichier pour enlever l'extension
+      const cleanTitle = fileName.replace(/\.(pptx|ppt)$/i, '');
+
+      return cleanTitle;
+    } catch (error) {
+      console.error("Error extracting PowerPoint title:", error);
+      return file.name; // Revenir au nom du fichier en cas d'erreur
+    }
   };
 
   const extractWordTitle = async (file) => {
@@ -368,13 +334,13 @@ const App = () => {
       reader.onload = async (e) => {
         try {
           const arrayBuffer = e.target.result;
-          
+
           // Extraire d'abord les propriétés du document si possible
           try {
             // Tentative d'extraction des métadonnées (non standard avec mammoth)
             const result = await mammoth.extractRawText({ arrayBuffer });
             const text = result.value;
-            
+
             // Essayer de trouver un titre dans les premières lignes
             const lines = text.split('\n').filter(line => line.trim());
             if (lines.length > 0) {
@@ -388,7 +354,7 @@ const App = () => {
           } catch (metadataError) {
             console.log("Impossible d'extraire les métadonnées du document Word");
           }
-          
+
           // Si nous n'avons pas pu extraire un titre, utiliser le nom du fichier
           resolve(file.name);
         } catch (error) {
@@ -560,8 +526,10 @@ const App = () => {
               Distribution demandée : ${userMessage}
               Fichiers fournis : ${selectedFiles.map(f => `${f.name} (${f.type})`).join(', ')}
               Informations extraites des fichiers : ${fileSummaries}
-              Génère exactement ${requestedSyllabusCount} syllabus sur le thème "${currentTheme}" selon cette distribution. Pour chaque syllabus, utilise ce format :
-              
+              IMPORTANT: Génère EXACTEMENT ${requestedSyllabusCount} syllabus sur le thème "${currentTheme}" selon cette distribution. 
+              Utilise EXACTEMENT un séparateur "---" entre chaque syllabus, et ne mets pas de séparateur après le dernier syllabus.
+              Pour chaque syllabus, utilise ce format :
+            
               **Nom du Cours** : ...
               **Semestre** : ...
               **Crédits ECTS** : ...
@@ -711,7 +679,7 @@ const App = () => {
       file.type === 'application/vnd.ms-powerpoint' ||
       file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     );
-  
+
 
     setSelectedFiles(supportedFiles);
     resetStates();
