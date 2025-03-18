@@ -573,11 +573,8 @@ const App = () => {
         });
 
         setMessages(prev => [...prev,
-        { text: `${syllabusArray.length} syllabus ont été généré(s) !`, isUser: false }
-        ]);
-
-        setMessages(prev => [...prev,
-        { text: `Sur quel autre sujet souhaitez-vous créer votre syllabus ?`, isUser: false }
+          { text: `${syllabusArray.length} syllabus ${syllabusArray.length > 1 ? 'ont été générés' : 'a été généré'} !`, isUser: false },
+          { text: `Sur quel autre sujet souhaitez-vous créer votre syllabus ?`, isUser: false }
         ]);
 
         // Après la génération réussie, réinitialiser les états pour la prochaine entrée
